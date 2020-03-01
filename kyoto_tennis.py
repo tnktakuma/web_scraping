@@ -11,8 +11,8 @@ def get_text():
     text = tomorrow.strftime('%Y年%m月%d日(%a)の空き情報') + '\n'
     for i, place in enumerate(['西院公園', '岡崎公園', '宝が池公園']):
         text += '\n' + place + '\n'
-        api = KyotoTennis()
-        avail_list = api.get_avail(i, tomorrow)
+        with KyotoTennis() as api:
+            avail_list = api.get_avail(i, tomorrow)
         for term, avail in avail_list:
             if avail:
                 text += f'{term[0]}-{term[1]} '
