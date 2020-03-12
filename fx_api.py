@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 
 from config import FX_ID, FX_PW
@@ -40,11 +41,53 @@ class FX:
     def quit(self):
         self.driver.quit()
 
-    def ask(self, country: int = 0, count: int = 0):
+    def get_rate(self, offer: str, country: str = 'usdjpy') -> float:
+        self.driver.find_element_by_id('gm1').click()
+        panel = self.driver.find_element_by_id(
+            'uforex1_id_rate_panel_' + country.lower())
+        rate = panel.find_element_by_xpath(f'.//*[text()="{offer}"]')
+        value = rate.find_elements_by_xpath('..//span')
+        return float(value[0].text + value[1].text + value[2].text)
+
+    def get_ask_rate(self, country: str = 'usdjpy') -> float:
+        return self.get_rate('ASK', country)
+
+    def get_bid_rate(self, country: str = 'usdjpy') -> float:
+        return self.get_rate('BID', country)
+
+    def order(self, offer: str, country: str = 'USDJPY', lot: int = 1):
+        # prepare
         self.driver.find_element_by_id('gm2').click()
         neworder = self.driver.find_element_by_id('content_neworder')
-        neworder.find_element_by_xpath('.//input[@value="S"]').click()
-        print('OK')
+        neworder.find_element_by_id('order_tab2').click()
+        # country
+        Select(neworder.find_element_by_xpath(
+            './/select[@name="com_list"]')).select_by_value(country.upper())
+        # no straddling
+        neworder.find_element_by_xpath('.//input[@value="0"]').click()
+        # lot
+        order_count = neworder.find_element_by_xpath(
+            './/input[@name="orderCount"]')
+        order_count.clear()
+        order_count.send_keys(str(lot))
+        # ask or bid
+        neworder.find_element_by_xpath(f'.//input[@value="{offer}"]').click()
+        # only market
+        Select(neworder.find_element_by_xpath(
+            './/select[@name="oexc_list"]')).select_by_value('00')
+        # ignore attention
+        confirm = neworder.find_element_by_xpath(
+            './/input[@name="confirmChk"]')
+        if confirm.is_selected():
+            confirm.click()
+        # order
+        neworder.find_element_by_xpath('.//input[@name="confirmBtn"]').click()
+
+    def order_ask(self, country: str = 'USDJPY', lot: int = 1):
+        self.order('B', country, lot)
+
+    def order_bid(self, country: str = 'USDJPY', lot: int = 1):
+        self.order('S', country, lot)
 
 
 if __name__ == '__main__':
