@@ -1,4 +1,5 @@
 import datetime
+import time
 from typing import List, Tuple
 
 from selenium import webdriver
@@ -75,6 +76,7 @@ class KyotoTennis:
                 the second one is bool which shows availability.
         """
         self.start(place, date)
+        time.sleep(10)
         rows = self.driver.find_elements_by_class_name('clsShisetuTitleOneDay')
         for row in rows:
             if row.text == 'テニスコート':
@@ -91,7 +93,7 @@ class KyotoTennis:
             elif '予約不可' in avail:
                 avail_list.append(((t, t + dt), False))
             else:
-                raise RuntimeError('error')
+                raise ValueError('Unexpected error at WEB')
             t += dt
         return avail_list
 
@@ -103,6 +105,7 @@ class KyotoTennis:
             date (datetime.datetime): the required date
         """
         self.start(place, date)
+        time.sleep(10)
         rows = self.driver.find_elements_by_class_name('clsShisetuTitleOneDay')
         for row in rows:
             if row.text == 'テニスコート':
@@ -114,6 +117,8 @@ class KyotoTennis:
             if date.hour < t:
                 avail = koma.find_element_by_tag_name('img')
                 break
+        else:
+            raise ValueError('The hour must not be over 21')
         if avail.get_attribute('alt') != '予約可能':
             raise ValueError('Not Available at this time')
         avail.click()
@@ -131,4 +136,4 @@ class KyotoTennis:
         self.driver.find_element_by_name('btn_toroku').click()
         self.driver.find_element_by_name('btn_cmd').click()
         Alert(self.driver).accept()
-        self.quit()
+        time.sleep(10)
