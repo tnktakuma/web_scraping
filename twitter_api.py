@@ -1,5 +1,6 @@
-from requests_oauthlib import OAuth1Session
 from typing import Any, Dict, List
+
+from requests_oauthlib import OAuth1Session
 
 from config import API, API_SCR, T_TOKEN, T_TOKEN_SCR
 
@@ -36,7 +37,7 @@ class Twitter:
             consumer_api_secret_key,
             access_token,
             access_token_secret)
-        
+
     def post_tweet(self, text: str):
         """Updates the authenticating user's current status, also known as Tweeting.
 
@@ -53,7 +54,7 @@ class Twitter:
         data = response.json()
         assert 'errors' not in data, str(data['errors'])
 
-    def get_tl(self, count=20) -> List[Dict[str, Any]]:
+    def get_my_tl(self, count=20) -> List[Dict[str, Any]]:
         """Specifies the number of records to retrieve.
 
         Args:
@@ -73,12 +74,33 @@ class Twitter:
         assert 'errors' not in data, str(data['errors'])
         return data
 
+    def get_other_tl(self, user: str, count=20) -> List[Dict[str, Any]]:
+        """Specifies the number of records to retrieve.
+
+        Args:
+            user (str): User
+            count (int): Specifies the number of records to retrieve.
+
+        Returns:
+            List[Dict[str, Any]]: The channel's messages
+
+        Raises:
+            AssertionError: Error
+
+        """
+        url = self.header + 'statuses/user_timeline.json'
+        payload = {'screen_name': user, 'count': count}
+        response = self.session.get(url, params=payload)
+        data = response.json()
+        assert 'errors' not in data, str(data['errors'])
+        return data
+
 
 if __name__ == '__main__':
     twitter = Twitter()
-    # twitter.post_tweet('テストを終了します．')
-    tl = twitter.get_tl()
-    for key, item in tl[0].items():
-        print(key)
-        print(item)
-        print()
+    tl = twitter.get_other_tl('tnktakuma')
+    for tweet in tl:
+        for key, item in tweet.items():
+            print(key)
+            print(item)
+            print()
