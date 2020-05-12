@@ -5,6 +5,7 @@ from collections import deque
 import numpy as np
 
 from fx_api import FX
+from twitter_api import Twitter
 
 
 def main(sample=100, dim=30, interval=10):
@@ -50,11 +51,11 @@ def main(sample=100, dim=30, interval=10):
             print(
                 'min:',
                 now + datetime.timedelta(seconds=interval*argmin),
-                round(y_hat[dim + argmin] - Y[-1]))
+                y_hat[dim + argmin] - Y[-1])
             print(
                 'max:',
                 now + datetime.timedelta(seconds=interval*argmax),
-                round(y_hat[dim + argmax] - Y[-1]))
+                y_hat[dim + argmax] - Y[-1])
             time.sleep(interval)
 
 

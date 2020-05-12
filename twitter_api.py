@@ -54,7 +54,7 @@ class Twitter:
         data = response.json()
         assert 'errors' not in data, str(data['errors'])
 
-    def get_my_tl(self, count=20) -> List[Dict[str, Any]]:
+    def get_my_tl(self, count=10) -> List[Dict[str, Any]]:
         """Specifies the number of records to retrieve.
 
         Args:
@@ -73,34 +73,3 @@ class Twitter:
         data = response.json()
         assert 'errors' not in data, str(data['errors'])
         return data
-
-    def get_other_tl(self, user: str, count=20) -> List[Dict[str, Any]]:
-        """Specifies the number of records to retrieve.
-
-        Args:
-            user (str): User
-            count (int): Specifies the number of records to retrieve.
-
-        Returns:
-            List[Dict[str, Any]]: The channel's messages
-
-        Raises:
-            AssertionError: Error
-
-        """
-        url = self.header + 'statuses/user_timeline.json'
-        payload = {'screen_name': user, 'count': count}
-        response = self.session.get(url, params=payload)
-        data = response.json()
-        assert 'errors' not in data, str(data['errors'])
-        return data
-
-
-if __name__ == '__main__':
-    twitter = Twitter()
-    tl = twitter.get_other_tl('tnktakuma')
-    for tweet in tl:
-        for key, item in tweet.items():
-            print(key)
-            print(item)
-            print()

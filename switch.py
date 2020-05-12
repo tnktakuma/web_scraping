@@ -1,31 +1,63 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
+import re
 
 from bs4 import BeautifulSoup
 
 from twitter_api import Twitter
 
-URLs = [
-    'https://www.amazon.co.jp/Nintendo-Switch-ニンテンドースイッチ-ネオンブルー-バッテリー持続時間が長くなったモデル/dp/B07WXL5YPW/ref=lp_4731379051_1_2?s=videogames&ie=UTF8&qid=1588021125&sr=1-2',
-    'https://www.amazon.co.jp/Nintendo-Switch-ニンテンドースイッチ-Joy-バッテリー持続時間が長くなったモデル/dp/B07WS7BZYF/ref=sr_1_1?__mk_ja_JP=カタカナ&dchild=1&keywords=任天堂スイッチ+本体&qid=1588029202&s=videogames&sr=1-1'
+ITEM = [
+    ['NINTENDO SWITCH gray', 'https://www.amazon.co.jp/dp/B07WS7BZYF/ref=cm_sw_em_r_mt_dp_U_tTaTEbV33WCNW'],
+    ['NINTENDO SWITCH blue and red', 'https://www.amazon.co.jp/dp/B07WXL5YPW/ref=cm_sw_em_r_mt_dp_U_PUaTEb9SBJ06M']
 ]
 
 
 def main():
-    flag = True
-    for URL in URLs:
-        r = requests.get(URL)
+    twitter = Twitter()
+    tl = twitter.get_my_tl(count=10)
+    interval = timedelta(hours=1)
+    for item in ITEM:
+        name, url = item
+        pre_time = None
+        pre_price = None
+        for tweet in tl:
+            text = tweet['text'].split('\n')
+            if len(text)== 4 and text[2] == name:
+                try:
+                    pre_time = datetime.strptime(text[0], '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    pre_time = None
+                    continue
+                pre_price = text[1]
+                break
+        r = requests.get(url)
         soup = BeautifulSoup(r.text, 'html.parser')
         our_price = soup.find(id='priceblock_ourprice')
+        time = datetime.now()
+        str_time = str(time).split('.')[0]
         if our_price is None:
+            template = str_time + '\nSOLD OUT\n' + name + '\n' + url
+            if pre_time is None:
+                twitter.post_tweet(template)
+            elif pre_price != 'SOLD OUT':
+                twitter.post_tweet(template)
+            elif pre_time + interval < time:
+                twitter.post_tweet(template)
             continue
-        Twitter().post_tweet(
-            str(datetime.now()) + '\n' + our_price.get_text() + '\n' + URL)
-        flag = False
-    if flag:
-        message = 'Nintendo Switch is out of stock at Amazon.'
-        Twitter().post_tweet(
-            str(datetime.now()) + '\n' + message)
+        price = our_price.get_text()
+        int_price = int(re.sub(r'\D', '', price))
+        template = str_time + '\n' + price + '\n' + name + '\n' + url
+        if int_price > 35000:
+            if pre_time is None:
+                twitter.post_tweet(template)
+            elif pre_price != price:
+                twitter.post_tweet(template)
+            elif pre_time + interval < time:
+                twitter.post_tweet(template)
+        elif int_price > 20000:
+            twitter.post_tweet('@tnktakuma\n' + template)
+        else:
+            twitter.post_tweet('ERROR\n' + template)
 
 
 if __name__ == '__main__':

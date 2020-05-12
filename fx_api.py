@@ -88,7 +88,3 @@ class FX:
 
     def order_bid(self, country: str = 'USDJPY', lot: int = 1):
         self.order('S', country, lot)
-
-
-if __name__ == '__main__':
-    main()
