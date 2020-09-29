@@ -21,7 +21,6 @@ class Twitter:
     Attributes:
         header (str): Twitter API's URL header
         session (OAuth1Session): OAuth1 Session
-
     """
 
     def __init__(
@@ -69,6 +68,84 @@ class Twitter:
         """
         url = self.header + 'statuses/home_timeline.json'
         payload = {'count': count}
+        response = self.session.get(url, params=payload)
+        data = response.json()
+        assert 'errors' not in data, str(data['errors'])
+        return data
+
+    def get_followers_ids(self, user_id=None, screen_name=None):
+        """Returns user IDs for every user following the specified user.
+
+        Args:
+            user_id (str): The ID of the user for whom to return results.
+            screen_name (str): The user name for whom to return results.
+
+        Returns:
+            List[Dict[str, Any]]: The channel's messages
+
+        Raises:
+            AssertionError: Error
+
+        """
+        url = self.header + 'followers/ids.json'
+        if user_id is not None:
+            payload = {'user_id': user_id}
+        elif screen_name is not None:
+            payload = {'screen_name': screen_name}
+        else:
+            payload = {}
+        response = self.session.get(url, params=payload)
+        data = response.json()
+        assert 'errors' not in data, str(data['errors'])
+        return data
+
+    def get_friends_ids(self, user_id=None, screen_name=None):
+        """Returns user IDs for every user the specified user is following.
+
+        Args:
+            user_id (str): The ID of the user for whom to return results.
+            screen_name (str): The user name for whom to return results.
+
+        Returns:
+            List[Dict[str, Any]]: The channel's messages
+
+        Raises:
+            AssertionError: Error
+
+        """
+        url = self.header + 'friends/ids.json'
+        if user_id is not None:
+            payload = {'user_id': user_id}
+        elif screen_name is not None:
+            payload = {'screen_name': screen_name}
+        else:
+            payload = {}
+        response = self.session.get(url, params=payload)
+        data = response.json()
+        assert 'errors' not in data, str(data['errors'])
+        return data
+
+    def show(self, user_id=None, screen_name=None):
+        """Returns a variety of information about the specified user.
+
+        Args:
+            user_id (str): The ID of the user for whom to return results.
+            screen_name (str): The user name for whom to return results.
+
+        Returns:
+            List[Dict[str, Any]]: The channel's messages
+
+        Raises:
+            AssertionError: Error
+
+        """
+        url = self.header + 'users/show.json'
+        if user_id is not None:
+            payload = {'user_id': user_id}
+        elif screen_name is not None:
+            payload = {'screen_name': screen_name}
+        else:
+            raise ValueError
         response = self.session.get(url, params=payload)
         data = response.json()
         assert 'errors' not in data, str(data['errors'])
