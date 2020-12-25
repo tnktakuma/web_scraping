@@ -90,10 +90,8 @@ class KyotoTennis:
             avail = koma.find_element_by_tag_name('img').get_attribute('alt')
             if '予約可能' in avail:
                 avail_list.append(((t, t + dt), True))
-            elif '予約不可' in avail:
+            elif '予約不可' in avail or '休館・点検' in avail:
                 avail_list.append(((t, t + dt), False))
-            else:
-                raise ValueError('Unexpected error at WEB')
             t += dt
         return avail_list
 
