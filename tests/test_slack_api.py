@@ -30,5 +30,5 @@ class TestSlack(unittest.TestCase):
         self.assertTrue(isinstance(message, dict))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

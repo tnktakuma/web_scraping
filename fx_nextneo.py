@@ -11,9 +11,9 @@ from twitter_api import Twitter
 def main(sample=100, dim=30, interval=10):
     if sample < 2 * dim:
         sample = 2 * dim
-        print('sample is changed to', 2 * dim)
+        print("sample is changed to", 2 * dim)
     with FX() as api:
-        mean_rate = 0.
+        mean_rate = 0.0
         queue = deque([], maxlen=dim)
         # The first row of the data matrix
         for i in range(dim):
@@ -49,15 +49,17 @@ def main(sample=100, dim=30, interval=10):
             argmax = int(np.argmax(y_hat[dim:])) + 1
             now = datetime.datetime.now()
             print(
-                'min:',
-                now + datetime.timedelta(seconds=interval*argmin),
-                y_hat[dim + argmin] - Y[-1])
+                "min:",
+                now + datetime.timedelta(seconds=interval * argmin),
+                y_hat[dim + argmin] - Y[-1],
+            )
             print(
-                'max:',
-                now + datetime.timedelta(seconds=interval*argmax),
-                y_hat[dim + argmax] - Y[-1])
+                "max:",
+                now + datetime.timedelta(seconds=interval * argmax),
+                y_hat[dim + argmax] - Y[-1],
+            )
             time.sleep(interval)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
