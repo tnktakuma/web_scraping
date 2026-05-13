@@ -1,11 +1,32 @@
 from typing import Any, Dict, List
 
+import requests
 from requests_oauthlib import OAuth1Session
 
-from config import API, API_SCR, T_TOKEN, T_TOKEN_SCR
+from config import (
+    X_BEARER_TOKEN,
+    X_CLIENT_ID,
+    X_CLIENT_SECRET,
+    X_CONSUMER_KEY,
+    X_CONSUMER_SECRET,
+)
 
-VERSION = "1.1"
+VERSION = "2"
 HEADER = f"https://api.twitter.com/{VERSION}/"
+
+
+class TwitterAPIError(Exception):
+    """Exception raised for Twitter API errors.
+
+    Attributes:
+        message (str): Explanation of the error
+        errors (dict): The error details from the API response
+    """
+
+    def __init__(self, message: str, errors: Any = None):
+        self.message = message
+        self.errors = errors
+        super().__init__(self.message)
 
 
 class Twitter:
@@ -26,31 +47,45 @@ class Twitter:
     def __init__(
         self,
         header=HEADER,
-        consumer_api_key=API,
-        consumer_api_secret_key=API_SCR,
-        access_token=T_TOKEN,
-        access_token_secret=T_TOKEN_SCR,
+        consumer_api_key=X_CONSUMER_KEY,
+        consumer_api_secret_key=X_CONSUMER_SECRET,
+        access_token=X_BEARER_TOKEN,
+        access_token_secret=X_CLIENT_SECRET,
     ):
         self.header = header
-        self.session = OAuth1Session(
-            consumer_api_key, consumer_api_secret_key, access_token, access_token_secret
-        )
+        self.session = None
+        # self.session = OAuth1Session(
+        #     consumer_api_key,
+        #     consumer_api_secret_key,
+        #     access_token,
+        #     access_token_secret,
+        # )
 
     def post_tweet(self, text: str):
-        """Updates the authenticating user's current status, also known as Tweeting.
+        """Updates the authenticating user's current status, a.k.a. Tweeting.
 
         Args:
             text (str): The text of the status update.
 
         Raises:
-            AssertionError: Error
+            TwitterAPIError: Error from Twitter API
 
         """
-        url = self.header + "statuses/update.json"
-        payload = {"status": text}
-        response = self.session.post(url, params=payload)
+        url = self.header + "tweets"
+        payload = {"text": text}
+        # response = self.session.post(url, json=payload)
+        response = requests.post(
+            url,
+            json=payload,
+            headers={"Authorization": f"Bearer {X_BEARER_TOKEN}"},
+        )
         data = response.json()
-        assert "errors" not in data, str(data["errors"])
+        print(data)
+        if "errors" in data or "error" in data:
+            raise TwitterAPIError(
+                "Failed to post tweet",
+                errors=data.get("errors", data.get("error")),
+            )
 
     def get_my_tl(self, count=10) -> List[Dict[str, Any]]:
         """Specifies the number of records to retrieve.
@@ -62,14 +97,18 @@ class Twitter:
             List[Dict[str, Any]]: The channel's messages
 
         Raises:
-            AssertionError: Error
+            TwitterAPIError: Error from Twitter API
 
         """
-        url = self.header + "statuses/home_timeline.json"
-        payload = {"count": count}
+        url = self.header + "tweets/home_timeline"
+        payload = {"max_results": min(count, 100)}
         response = self.session.get(url, params=payload)
         data = response.json()
-        assert "errors" not in data, str(data["errors"])
+        if "errors" in data or "error" in data:
+            raise TwitterAPIError(
+                "Failed to get timeline",
+                errors=data.get("errors", data.get("error")),
+            )
         return data
 
     def get_followers_ids(self, user_id=None, screen_name=None):
@@ -83,19 +122,27 @@ class Twitter:
             List[Dict[str, Any]]: The channel's messages
 
         Raises:
-            AssertionError: Error
+            TwitterAPIError: Error from Twitter API
 
         """
-        url = self.header + "followers/ids.json"
+        # Note: Twitter API v2 requires user_id, screen_name is not supported
         if user_id is not None:
-            payload = {"user_id": user_id}
+            url = self.header + f"users/{user_id}/followers"
         elif screen_name is not None:
-            payload = {"screen_name": screen_name}
+            # First, get user_id from screen_name
+            user_data = self.get_user_by_username(screen_name)
+            user_id = user_data["data"]["id"]
+            url = self.header + f"users/{user_id}/followers"
         else:
-            payload = {}
-        response = self.session.get(url, params=payload)
+            raise ValueError("Either user_id or screen_name must be provided")
+
+        response = self.session.get(url)
         data = response.json()
-        assert "errors" not in data, str(data["errors"])
+        if "errors" in data or "error" in data:
+            raise TwitterAPIError(
+                "Failed to get followers",
+                errors=data.get("errors", data.get("error")),
+            )
         return data
 
     def get_friends_ids(self, user_id=None, screen_name=None):
@@ -109,19 +156,27 @@ class Twitter:
             List[Dict[str, Any]]: The channel's messages
 
         Raises:
-            AssertionError: Error
+            TwitterAPIError: Error from Twitter API
 
         """
-        url = self.header + "friends/ids.json"
+        # Note: Twitter API v2 requires user_id, screen_name is not supported
         if user_id is not None:
-            payload = {"user_id": user_id}
+            url = self.header + f"users/{user_id}/following"
         elif screen_name is not None:
-            payload = {"screen_name": screen_name}
+            # First, get user_id from screen_name
+            user_data = self.get_user_by_username(screen_name)
+            user_id = user_data["data"]["id"]
+            url = self.header + f"users/{user_id}/following"
         else:
-            payload = {}
-        response = self.session.get(url, params=payload)
+            raise ValueError("Either user_id or screen_name must be provided")
+
+        response = self.session.get(url)
         data = response.json()
-        assert "errors" not in data, str(data["errors"])
+        if "errors" in data or "error" in data:
+            raise TwitterAPIError(
+                "Failed to get following users",
+                errors=data.get("errors", data.get("error")),
+            )
         return data
 
     def show(self, user_id=None, screen_name=None):
@@ -135,17 +190,54 @@ class Twitter:
             List[Dict[str, Any]]: The channel's messages
 
         Raises:
-            AssertionError: Error
+            TwitterAPIError: Error from Twitter API
 
         """
-        url = self.header + "users/show.json"
         if user_id is not None:
-            payload = {"user_id": user_id}
+            url = self.header + f"users/{user_id}"
         elif screen_name is not None:
-            payload = {"screen_name": screen_name}
+            return self.get_user_by_username(screen_name)
         else:
-            raise ValueError
-        response = self.session.get(url, params=payload)
+            raise ValueError("Either user_id or screen_name must be provided")
+
+        response = self.session.get(url)
         data = response.json()
-        assert "errors" not in data, str(data["errors"])
+        if "errors" in data or "error" in data:
+            raise TwitterAPIError(
+                "Failed to get user information",
+                errors=data.get("errors", data.get("error")),
+            )
         return data
+
+    def get_user_by_username(self, username: str):
+        """Returns information about a user by username.
+
+        Args:
+            username (str): The username (without @) for whom to return
+                results.
+
+        Returns:
+            Dict[str, Any]: The user information
+
+        Raises:
+            TwitterAPIError: Error from Twitter API
+
+        """
+        url = self.header + f"users/by/username/{username}"
+        response = self.session.get(url)
+        data = response.json()
+        if "errors" in data or "error" in data:
+            raise TwitterAPIError(
+                "Failed to get user by username",
+                errors=data.get("errors", data.get("error")),
+            )
+        return data
+
+
+if __name__ == "__main__":
+    twitter = Twitter()
+    try:
+        twitter.post_tweet("Hello, Twitter API v2!")
+        print("Tweet posted successfully.")
+    except TwitterAPIError as e:
+        print(f"Error posting tweet: {e.message}, Details: {e.errors}")
